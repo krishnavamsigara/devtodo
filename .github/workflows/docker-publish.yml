@@ -9,76 +9,34 @@ on:
   workflow_dispatch:
 
 jobs:
-  backend:
-    name: Build & Push Backend Image
+  build-and-push:
+    name: Build & Push Images to Docker Hub
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Log in to Docker Hub
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME || 'vamsi532' }}
-          password: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKER_PASSWORD || secrets.DOCKERHUB_PASSWORD }}
+          username: vamsi532
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract Docker metadata for Backend
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: vamsi532/post-backend
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=ref,event=branch
-            type=sha,format=short
+      - name: Build & Push Backend Image
+        run: |
+          echo "Building backend Docker image..."
+          docker build -t vamsi532/post-backend:latest ./backend
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "Pushing backend image to Docker Hub..."
+            docker push vamsi532/post-backend:latest
+          fi
 
-      - name: Build and push Backend Image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-  frontend:
-    name: Build & Push Frontend Image
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME || 'vamsi532' }}
-          password: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKER_PASSWORD || secrets.DOCKERHUB_PASSWORD }}
-
-      - name: Extract Docker metadata for Frontend
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: vamsi532/post-frontend
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=ref,event=branch
-            type=sha,format=short
-
-      - name: Build and push Frontend Image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
-          build-args: |
-            VITE_API_URL=/api
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+      - name: Build & Push Frontend Image
+        run: |
+          echo "Building frontend Docker image..."
+          docker build --build-arg VITE_API_URL=/api -t vamsi532/post-frontend:latest ./frontend
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "Pushing frontend image to Docker Hub..."
+            docker push vamsi532/post-frontend:latest
+          fi
