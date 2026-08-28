@@ -10,6 +10,9 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
+# Default build-time DATABASE_URL for Prisma client generation
+ENV DATABASE_URL="postgresql://postgres:password@localhost:5432/postsdb?schema=public"
+
 # Install dependencies and generate Prisma client
 RUN npm ci && npx prisma generate
 
