@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME || 'krishnavamsigara' }}
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME || 'vamsi532' }}
 
 jobs:
   backend:
@@ -33,7 +33,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.DOCKERHUB_USERNAME }}/devtodo-backend
+          images: ${{ env.DOCKERHUB_USERNAME }}/post-backend
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=branch
@@ -71,7 +71,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.DOCKERHUB_USERNAME }}/devtodo-frontend
+          images: ${{ env.DOCKERHUB_USERNAME }}/post-frontend
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=branch

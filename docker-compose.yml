@@ -23,7 +23,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: ${DOCKERHUB_USERNAME:-krishnavamsigara}/devtodo-backend:${IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME:-vamsi532}/post-backend:${IMAGE_TAG:-latest}
     container_name: devtodo-backend
     restart: unless-stopped
     environment:
@@ -46,7 +46,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}
-    image: ${DOCKERHUB_USERNAME:-krishnavamsigara}/devtodo-frontend:${IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_USERNAME:-vamsi532}/post-frontend:${IMAGE_TAG:-latest}
     container_name: devtodo-frontend
     restart: unless-stopped
     ports:
