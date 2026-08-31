@@ -1,0 +1,49 @@
+services:
+  # ==========================================
+  # Backend API Service (Production)
+  # ==========================================
+  backend:
+    image: ${DOCKER_IMAGE_BACKEND:-vamsi532/post-backend:latest}
+    container_name: posts-backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-1d}
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ==========================================
+  # Frontend Service (Nginx SPA + Reverse Proxy)
+  # ==========================================
+  frontend:
+    image: ${DOCKER_IMAGE_FRONTEND:-vamsi532/post-frontend:latest}
+    container_name: posts-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  app-network:
+    driver: bridge
