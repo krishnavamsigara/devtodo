@@ -15,7 +15,7 @@ export default function Navbar() {
       <div className="navbar-container">
         <Link to="/posts" className="navbar-logo">
           <span>📝</span>
-          <span>Simple Posts</span>
+          <span>Blog Posts</span>
         </Link>
 
         <nav className="navbar-nav">
