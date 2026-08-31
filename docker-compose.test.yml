@@ -1,0 +1,20 @@
+services:
+  backend-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: tester
+    container_name: posts-backend-test
+    environment:
+      - NODE_ENV=test
+      - JWT_SECRET=test-jwt-secret
+      - DATABASE_URL=postgresql://test:test@localhost:5432/testdb
+
+  frontend-test:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: tester
+    container_name: posts-frontend-test
+    environment:
+      - NODE_ENV=test

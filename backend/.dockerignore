@@ -1,10 +1,10 @@
 node_modules
 npm-debug.log
 .env
-.env.*
+.env.local
 .git
 .gitignore
-tests
 coverage
-.vscode
-.idea
+.nyc_output
+dist
+*.log

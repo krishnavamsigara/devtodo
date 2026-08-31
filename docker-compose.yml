@@ -1,66 +1,88 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: devtodo-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
-      POSTGRES_DB: ${POSTGRES_DB:-postsdb}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postsdb}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - devtodo-network
-
+  # ==========================================
+  # Backend API Service
+  # ==========================================
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: ${DOCKERHUB_USERNAME:-vamsi532}/post-backend:${IMAGE_TAG:-latest}
-    container_name: devtodo-backend
+      target: runner
+    container_name: posts-backend
     restart: unless-stopped
-    environment:
-      NODE_ENV: ${NODE_ENV:-production}
-      PORT: ${BACKEND_PORT:-5000}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-postsdb}?schema=public
-      JWT_SECRET: ${JWT_SECRET:-devtodo-super-secret-jwt-key}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
     ports:
-      - "${BACKEND_PORT:-5000}:${BACKEND_PORT:-5000}"
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - "${PORT:-5000}:5000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=5000
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/postsdb?schema=public}
+      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-replace-in-production}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-1d}
     networks:
-      - devtodo-network
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
+  # ==========================================
+  # Frontend Service (Nginx + Static SPA)
+  # ==========================================
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: runner
       args:
-        VITE_API_URL: ${VITE_API_URL:-/api}
-    image: ${DOCKERHUB_USERNAME:-vamsi532}/post-frontend:${IMAGE_TAG:-latest}
-    container_name: devtodo-frontend
+        - VITE_API_URL=/api
+    container_name: posts-frontend
     restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT:-3000}:80"
-      - "${FRONTEND_ALT_PORT:-5173}:80"
+      - "80:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
-      - devtodo-network
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # ==========================================
+  # Optional Local PostgreSQL (Offline / Local DevOps)
+  # Note: When using Neon DB, this service can be omitted or skipped.
+  # Use profile: `docker compose --profile local-db up`
+  # ==========================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: posts-postgres
+    restart: unless-stopped
+    profiles:
+      - local-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-postsdb}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   postgres_data:
     driver: local
-
-networks:
-  devtodo-network:
-    driver: bridge

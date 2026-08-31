@@ -1,10 +1,9 @@
 node_modules
-npm-debug.log
 dist
+npm-debug.log
 .env
-.env.*
+.env.local
 .git
 .gitignore
 coverage
-.vscode
-.idea
+*.log

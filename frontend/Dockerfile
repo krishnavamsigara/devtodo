@@ -1,34 +1,44 @@
-# Stage 1: Build React application
-FROM node:20-alpine AS build
-
+# ==========================================
+# Dependencies Stage
+# ==========================================
+FROM node:20-alpine AS dependencies
 WORKDIR /app
-
-# Copy dependency manifests
 COPY package*.json ./
-
-# Install dependencies
 RUN npm ci
 
-# Copy frontend source code
+# ==========================================
+# Testing Stage (DevOps CI Target)
+# ==========================================
+FROM dependencies AS tester
+WORKDIR /app
 COPY . .
+ENV NODE_ENV=test
+RUN npm test
 
-# Set API URL build argument and environment
+# ==========================================
+# Builder Stage
+# ==========================================
+FROM dependencies AS builder
+WORKDIR /app
+COPY . .
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
-
-# Build static production assets
 RUN npm run build
 
-# Stage 2: Serve with Nginx
-FROM nginx:alpine
+# ==========================================
+# Production Runtime Stage (Nginx)
+# ==========================================
+FROM nginx:alpine AS runner
 
-# Copy custom Nginx configuration
+# Copy customized Nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy compiled assets from build stage
-COPY --from=build /app/dist /usr/share/nginx/html
+# Copy static assets from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Expose HTTP port
 EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost:80/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]

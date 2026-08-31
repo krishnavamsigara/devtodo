@@ -1,29 +1,52 @@
-# Base node image with openssl for Prisma support on Alpine
-FROM node:20-alpine
-
-# Install openssl for Prisma client compatibility
-RUN apk add --no-cache openssl
-
+# ==========================================
+# Base Image
+# ==========================================
+FROM node:20-alpine AS base
 WORKDIR /app
+# Install openssl and libc6-compat for Prisma engine on Alpine, plus curl for healthcheck
+RUN apk add --no-cache openssl libc6-compat curl
 
-# Copy dependency manifests
+# ==========================================
+# Dependencies Stage
+# ==========================================
+FROM base AS dependencies
 COPY package*.json ./
 COPY prisma ./prisma/
+RUN npm ci
+RUN npx prisma generate
 
-# Default build-time DATABASE_URL for Prisma client generation
-ENV DATABASE_URL="postgresql://postgres:password@localhost:5432/postsdb?schema=public"
-
-# Install dependencies and generate Prisma client
-RUN npm ci && npx prisma generate
-
-# Copy application source files
+# ==========================================
+# Testing Stage (DevOps CI Target)
+# ==========================================
+FROM dependencies AS tester
 COPY . .
+ENV NODE_ENV=test
+RUN npm test
 
-# Expose backend service port
+# ==========================================
+# Production Runtime Stage
+# ==========================================
+FROM base AS runner
+ENV NODE_ENV=production
+WORKDIR /app
+
+# Copy dependencies and generated prisma client from dependencies stage
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=dependencies /app/node_modules/.prisma ./node_modules/.prisma
+COPY package*.json ./
+COPY prisma ./prisma/
+COPY src ./src/
+COPY docker-entrypoint.sh ./
+
+# Make entrypoint executable and adjust ownership
+RUN chmod +x docker-entrypoint.sh && chown -R node:node /app
+
+USER node
+
 EXPOSE 5000
 
-# Set default environment to production
-ENV NODE_ENV=production
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:5000/api/health || exit 1
 
-# Run database migrations and start application
-CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
+ENTRYPOINT ["/bin/sh", "docker-entrypoint.sh"]
+CMD ["node", "src/server.js"]
