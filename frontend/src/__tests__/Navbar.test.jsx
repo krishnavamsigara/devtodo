@@ -18,7 +18,7 @@ describe('Navbar Component', () => {
       </BrowserRouter>
     );
 
-    expect(screen.getByText('Sample Posts')).toBeInTheDocument();
+    expect(screen.getByText('Blog Posts')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Posts' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Login' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Register' })).toBeInTheDocument();
